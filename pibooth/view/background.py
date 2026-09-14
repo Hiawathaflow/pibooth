@@ -195,6 +195,10 @@ class Background(object):
 
 class IntroBackground(Background):
 
+    # Per line (x, y) shift as a fraction of the text area, to stagger the
+    # intro lines instead of stacking them flush. Negative is left resp. up.
+    LINE_OFFSETS = ((-0.16, -0.12), (0.08, 0.06))
+
     def __init__(self, arrow_location=ARROW_BOTTOM, arrow_offset=0):
         Background.__init__(self, "intro")
         self.arrow_location = arrow_location
@@ -231,8 +235,12 @@ class IntroBackground(Background):
         """Update text surfaces.
         """
         if self.arrow_location == ARROW_HIDDEN:
-            rect = pygame.Rect(self._text_border, self._text_border,
-                               self._rect.width / 2 - 2 * self._text_border,
+            # No arrows to leave room for, so use a wider and more centered
+            # area instead of squeezing the text into the left half.
+            width = self._rect.width * 0.75 - 2 * self._text_border
+            rect = pygame.Rect(self._rect.width / 2 - width / 2,
+                               self._text_border,
+                               width,
                                self._rect.height - 2 * self._text_border)
             align = 'center'
         elif self.arrow_location == ARROW_BOTTOM:
@@ -251,6 +259,10 @@ class IntroBackground(Background):
                                self._rect.height * 0.6 - self._text_border)
             align = 'top-center'
         Background.resize_texts(self, rect, align)
+
+        for (dx, dy), (_surface, pos) in zip(self.LINE_OFFSETS, self._texts):
+            pos.x += int(rect.width * dx)
+            pos.y += int(rect.height * dy)
 
     def paint(self, screen):
         Background.paint(self, screen)
