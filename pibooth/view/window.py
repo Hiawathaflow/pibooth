@@ -117,7 +117,41 @@ class PiWindow(object):
             pygame.draw.rect(outlines, pygame.Color(255, 0, 0), outlines.get_rect(), 2)
             self.surface.blit(outlines, self._pos_map[pos](outlines))
 
-        return self.surface.blit(image, self._pos_map[pos](image))
+        rect = self.surface.blit(image, self._pos_map[pos](image))
+
+        # The image covers the texts, icons and indicators, draw them again.
+        self.redraw_background_overlays()
+        if self._capture_number[0]:
+            self._update_capture_number()
+            self._update_print_number()
+        # Widen the refreshed area, those elements sit outside the image.
+        return self.surface.get_rect()
+
+    def redraw_background_overlays(self):
+        """Draw everything the background puts on top of its base image again.
+
+        Texts, arrows and the people/layout icons would otherwise stay hidden
+        below a foreground image such as the camera preview.
+        """
+        bkgd = self._current_background
+        if not bkgd:
+            return
+
+        for text_surface, pos in bkgd._texts:
+            self.surface.blit(text_surface, pos)
+
+        # Backgrounds blit their extra images as pairs of <name>/<name>_pos
+        # attributes (arrows, people, layouts, ...). Pick them up generically
+        # so every view is covered.
+        for attr, pos in list(vars(bkgd).items()):
+            if not attr.endswith('_pos') or pos is None:
+                continue
+            image = getattr(bkgd, attr[:-4], None)
+            if isinstance(image, pygame.Surface):
+                self.surface.blit(image, pos)
+
+        for outline_surface, pos in bkgd._outlines:
+            self.surface.blit(outline_surface, pos)
 
     def _update_background(self, bkgd):
         """Show image on the background.
