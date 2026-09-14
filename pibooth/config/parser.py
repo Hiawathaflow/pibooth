@@ -260,6 +260,12 @@ DEFAULT = odict((
      ),
     ("CONTROLS",
         odict((
+            ("capture_key",
+                ("p",
+                 "Keyboard key which starts a capture, named as pygame does "
+                 "(p, space, return, f13, ...). Bluetooth remotes and foot "
+                 "switches show up as keyboards sending one of these.",
+                 "Capture key", "")),
             ("debounce_delay",
                 (0.3,
                  "How long to press a single hardware button in seconds",

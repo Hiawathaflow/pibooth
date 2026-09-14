@@ -301,11 +301,27 @@ class PiApplication(object):
                 return event
         return None
 
+    def get_capture_key(self):
+        """Return the pygame key code which starts a capture.
+
+        Configurable so that Bluetooth remotes, foot switches and the like can
+        be used: they show up as keyboards sending their own key.
+        """
+        name = self._config.get('CONTROLS', 'capture_key').strip().strip('\'"')
+        if not name:
+            return pygame.K_p
+        try:
+            return pygame.key.key_code(name)
+        except ValueError:
+            LOGGER.warning("Unknown capture key '%s', falling back to 'p'", name)
+            return pygame.K_p
+
     def find_capture_event(self, events):
         """Return the first found event if found in the list.
         """
+        capture_key = self.get_capture_key()
         for event in events:
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
+            if event.type == pygame.KEYDOWN and event.key == capture_key:
                 return event
             if (event.type == pygame.MOUSEBUTTONUP and event.button in (1, 2, 3)) or event.type == pygame.FINGERUP:
                 pos = get_event_pos(self._window.display_size, event)
