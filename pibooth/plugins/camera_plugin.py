@@ -32,6 +32,8 @@ class CameraPlugin(object):
                        cfg.gettuple('CAMERA', 'rotation', int, 2),
                        cfg.getboolean('CAMERA', 'flip'),
                        cfg.getboolean('CAMERA', 'delete_internal_memory'))
+        # Keep the 'Smile!' overlay in the same color as the rest of the UI
+        cam.overlay_text_color = cfg.gettyped('WINDOW', 'text_color')
         outcome.force_result(cam)
 
     @pibooth.hookimpl

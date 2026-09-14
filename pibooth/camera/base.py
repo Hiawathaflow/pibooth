@@ -21,6 +21,8 @@ class BaseCamera(object):
         self.preview_rotation, self.capture_rotation = (0, 0)
         self.preview_iso, self.capture_iso = (100, 100)
         self.preview_flip, self.capture_flip = (False, False)
+        # Color of the 'Smile!' and countdown overlay, set from the config
+        self.overlay_text_color = (255, 255, 255)
 
     def initialize(self, iso, resolution, rotation=0, flip=False, delete_internal_memory=False):
         """Initialize the camera.
@@ -86,7 +88,7 @@ class BaseCamera(object):
         left, top, right, bottom = draw.textbbox((0, 0), text, font=font)
 
         position = ((size[0] - (right - left)) // 2 - left, (size[1] - (bottom - top)) // 2 - top)
-        draw.text(position, text, (255, 255, 255, alpha), font=font)
+        draw.text(position, text, tuple(self.overlay_text_color) + (alpha,), font=font)
         return image
 
     def preview(self, window, flip=True):
