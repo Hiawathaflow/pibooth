@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import os
 import time
 import pygame
 try:
@@ -30,6 +31,13 @@ def get_cv_camera_proxy(port=None):
         # OpenCV is not installed or can not be loaded
         LOGGER.debug("OpenCV not available: %s", OPENCV_ERROR)
         return None
+
+    # find_camera() calls this without a port and would then grab the first
+    # working device, which on a laptop is the built-in camera. PIBOOTH_CV_PORT
+    # pins a specific /dev/videoN index.
+    if port is None and os.environ.get('PIBOOTH_CV_PORT'):
+        port = int(os.environ['PIBOOTH_CV_PORT'])
+        LOGGER.info("Using OpenCV camera port %s (PIBOOTH_CV_PORT)", port)
 
     if port is not None:
         if not isinstance(port, int):
