@@ -1,7 +1,58 @@
 # -*- coding: utf-8 -*-
 
+import time
+
 import pibooth
 from pibooth.utils import LOGGER, get_crash_message, PoolingTimer
+
+# Redrawing the wait screen on every loop eats a full CPU core and starves the
+# sound mixer. Ten frames per second is smooth enough for a preview.
+WAIT_PREVIEW_FPS = 10
+_last_wait_preview = 0.0
+
+
+def show_wait_preview(cfg, app, win):
+    """Blit a translucent live preview frame on top of the wait screen.
+
+    Returns True while the preview owns the foreground, so the caller knows
+    that the previously taken picture must not be drawn.
+    """
+    if not cfg.getboolean('WINDOW', 'preview_always'):
+        return False
+
+    alpha = cfg.getint('WINDOW', 'preview_always_alpha')
+    if alpha < 1:
+        return False
+
+    global _last_wait_preview
+    now = time.monotonic()
+    if now - _last_wait_preview < 1.0 / WAIT_PREVIEW_FPS:
+        # Too early for a new frame, but the foreground still belongs to us
+        return True
+    _last_wait_preview = now
+
+    try:
+        # _get_preview_image() needs the window to compute the target size;
+        # normally preview() sets it, which does not run in the wait state.
+        app.camera._window = win
+        image = app.camera._get_preview_image()
+    except Exception as ex:
+        LOGGER.warning("Permanent preview not available: %s", ex)
+        return False
+
+    if image is None:
+        return False
+
+    bkgd = win._current_background
+    if bkgd:
+        # Repaint the background first, otherwise every translucent frame is
+        # stacked on the previous one and the preview turns opaque.
+        bkgd.paint(win.surface)
+
+    image = image.convert('RGBA')
+    image.putalpha(min(alpha, 255))
+    win.show_image(image)
+    return True
 
 
 class ViewPlugin(object):
@@ -52,11 +103,20 @@ class ViewPlugin(object):
 
         win.show_intro(previous_picture, app.printer.is_ready()
                        and app.count.remaining_duplicates > 0)
+        show_wait_preview(cfg, app, win)
         if app.printer.is_installed():
             win.set_print_number(len(app.printer.get_all_tasks()), not app.printer.is_ready())
 
     @pibooth.hookimpl
-    def state_wait_do(self, app, win, events):
+    def state_wait_do(self, cfg, app, win, events):
+        if show_wait_preview(cfg, app, win):
+            # Live preview owns the foreground, skip the previous picture
+            event = app.find_print_status_event(events)
+            if event and app.printer.is_installed():
+                win.set_print_number(len(app.printer.get_all_tasks()),
+                                     not app.printer.is_ready())
+            return
+
         if app.previous_animated and self.animated_frame_timer.is_timeout():
             previous_picture = next(app.previous_animated)
             win.show_intro(previous_picture, app.printer.is_ready()
