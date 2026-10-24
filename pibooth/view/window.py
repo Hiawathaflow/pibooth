@@ -351,10 +351,7 @@ class PiWindow(object):
             raise ValueError("The flash counter shall be greater than 0")
 
         for i in range(count):
-            self.surface.fill((255, 255, 255))
-            if self._current_foreground:
-                # Flash only the background, keep foreground at the top
-                self._update_foreground(*self._current_foreground)
+            self.surface.fill((255, 255, 255))  # Whole window, including the foreground
             pygame.event.pump()
             pygame.display.update()
             time.sleep(0.02)
