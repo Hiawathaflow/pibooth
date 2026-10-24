@@ -113,7 +113,7 @@ class CameraPlugin(object):
 
         LOGGER.info("Take a capture")
         if cfg.getboolean('WINDOW', 'flash'):
-            with win.flash(2):  # Manage the window here, have no choice
+            with win.flash(cfg.getfloat('WINDOW', 'flash_duration')):  # Manage the window here, have no choice
                 app.camera.capture(effect)
         else:
             app.camera.capture(effect)

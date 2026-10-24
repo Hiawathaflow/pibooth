@@ -344,27 +344,24 @@ class PiWindow(object):
             self._update_background(background.FinishedBackground())
 
     @contextlib.contextmanager
-    def flash(self, count):
-        """Flash the window content.
+    def flash(self, duration):
+        """Turn the whole window white for at least `duration` seconds. It stays
+        white until the actions done inside the 'with' block are finished.
         """
-        if count < 1:
-            raise ValueError("The flash counter shall be greater than 0")
+        if duration <= 0:
+            raise ValueError("The flash duration shall be greater than 0")
 
-        for i in range(count):
-            self.surface.fill((255, 255, 255))  # Whole window, including the foreground
+        start = time.time()
+        self.surface.fill((255, 255, 255))  # Whole window, including the foreground
+        pygame.event.pump()
+        pygame.display.update()
+        yield  # Let's do actions before end of flash
+        while time.time() - start < duration:
             pygame.event.pump()
-            pygame.display.update()
-            time.sleep(0.02)
-            if i == count - 1:
-                yield  # Let's do actions before end of flash
-                self.update()
-                pygame.event.pump()
-                pygame.display.update()
-            else:
-                self.update()
-                pygame.event.pump()
-                pygame.display.update()
-                time.sleep(0.02)
+            time.sleep(0.01)
+        self.update()
+        pygame.event.pump()
+        pygame.display.update()
 
     def set_capture_number(self, current_nbr, total_nbr):
         """Set the current number of captures taken.
