@@ -159,7 +159,7 @@ DEFAULT = odict((
             ("preview_always_alpha",
                 (120,
                  "Transparency of the permanent preview (0=invisible, 255=opaque)",
-                 "Preview transparency", [str(i) for i in range(20, 256, 20)])),
+                 "Preview transparency", [str(i) for i in range(20, 256, 20)] + ['255'])),
         ))
      ),
     ("PICTURE",
