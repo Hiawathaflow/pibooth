@@ -219,7 +219,7 @@ DEFAULT = odict((
             ("iso",
                 (100,
                  "Adjust ISO for lighting issues, can be different for preview and capture (list of integers accepted)",
-                 "ISO", ['100', '200', '400', '800', '1600', '3200', '6400'])),
+                 "ISO", ['Auto', '100', '200', '400', '800', '1600', '3200', '6400'])),
             ("flip",
                 (False,
                  "Flip horizontally the capture",

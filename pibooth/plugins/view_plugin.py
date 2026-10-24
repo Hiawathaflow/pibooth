@@ -4,6 +4,7 @@ import time
 
 import pibooth
 from pibooth.utils import LOGGER, get_crash_message, PoolingTimer
+from pibooth.plugins.camera_plugin import apply_iso
 
 # Redrawing the wait screen on every loop eats a full CPU core and starves the
 # sound mixer. Ten frames per second is smooth enough for a preview.
@@ -36,6 +37,7 @@ def show_wait_preview(cfg, app, win):
         # normally preview() sets it, which does not run in the wait state.
         app.camera._window = win
         app.camera.preview_brightness = cfg.getfloat('CAMERA', 'preview_brightness')
+        apply_iso(cfg, app)
         image = app.camera._get_preview_image()
     except Exception as ex:
         LOGGER.warning("Permanent preview not available: %s", ex)

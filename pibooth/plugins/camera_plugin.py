@@ -7,6 +7,24 @@ from pibooth import camera
 from pibooth.utils import LOGGER
 
 
+def get_iso(cfg):
+    """Return the (preview, capture) ISO. Outdoors the camera chooses it itself.
+    """
+    if cfg.get('CAMERA', 'light_mode') == 'outdoor':
+        return ('Auto', 'Auto')
+    return tuple(cfg.gettuple('CAMERA', 'iso', (int, str), 2))
+
+
+def apply_iso(cfg, app):
+    """Use a changed ISO or light mode without restarting pibooth.
+    """
+    iso = get_iso(cfg)
+    if (app.camera.preview_iso, app.camera.capture_iso) != iso:
+        app.camera.preview_iso, app.camera.capture_iso = iso
+        if hasattr(app.camera, 'set_config_value'):
+            app.camera.set_config_value('imgsettings', 'iso', app.camera.preview_iso)
+
+
 class CameraPlugin(object):
 
     """Plugin to manage the camera captures.
@@ -32,6 +50,10 @@ class CameraPlugin(object):
                         "Brightness of the live preview, also on the wait screen "
                         "(1.0 = unchanged), does not affect the pictures",
                         "Preview brightness", ['{:.1f}'.format(i / 10) for i in range(5, 31)])
+        cfg.add_option('CAMERA', 'light_mode', 'indoor',
+                        "Exposure: 'indoor' uses the fixed ISO, 'outdoor' lets the DSLR choose "
+                        "the ISO itself while the light changes",
+                        "Light mode", ['indoor', 'outdoor'])
         cfg.add_option('CAMERA', 'photo_autolevels', 1,
                         "Percent of the darkest and brightest pixels ignored when the tonal "
                         "range of the DSLR pictures is stretched (0 = off)",
@@ -52,7 +74,7 @@ class CameraPlugin(object):
             LOGGER.debug("Fallback to pibooth default camera management system")
             cam = camera.find_camera(cfg)
 
-        cam.initialize(cfg.gettuple('CAMERA', 'iso', (int, str), 2),
+        cam.initialize(get_iso(cfg),
                        cfg.gettyped('CAMERA', 'resolution'),
                        cfg.gettuple('CAMERA', 'rotation', int, 2),
                        cfg.getboolean('CAMERA', 'flip'),
@@ -100,18 +122,8 @@ class CameraPlugin(object):
         app.camera.photo_autolevels = cfg.getfloat('CAMERA', 'photo_autolevels')
         app.camera.photo_contrast = cfg.getfloat('CAMERA', 'photo_contrast')
         app.camera.photo_saturation = cfg.getfloat('CAMERA', 'photo_saturation')
-        self._apply_iso(cfg, app)
+        apply_iso(cfg, app)
         app.camera.preview(win)
-
-    @staticmethod
-    def _apply_iso(cfg, app):
-        """Use a changed ISO without restarting pibooth.
-        """
-        iso = cfg.gettuple('CAMERA', 'iso', (int, str), 2)
-        if (app.camera.preview_iso, app.camera.capture_iso) != tuple(iso):
-            app.camera.preview_iso, app.camera.capture_iso = iso
-            if hasattr(app.camera, 'set_config_value'):
-                app.camera.set_config_value('imgsettings', 'iso', app.camera.preview_iso)
 
     @pibooth.hookimpl
     def state_preview_do(self, cfg, app):
