@@ -265,6 +265,9 @@ class GpCamera(BaseCamera):
             if updated_rect:
                 pygame.display.update(updated_rect)
 
+            if self.capture_trigger and remaining <= self.capture_trigger:
+                break  # The camera needs time to react, start capturing now
+
         self._show_overlay(get_translated_text('smile'), alpha)
         self._window.show_image(self._get_preview_image())
 

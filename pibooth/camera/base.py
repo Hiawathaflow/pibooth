@@ -23,6 +23,8 @@ class BaseCamera(object):
         self.preview_flip, self.capture_flip = (False, False)
         # Color of the 'Smile!' and countdown overlay, set from the config
         self.overlay_text_color = (255, 255, 255)
+        # Countdown number at which the capture is started (0 = at the end)
+        self.capture_trigger = 0
 
     def initialize(self, iso, resolution, rotation=0, flip=False, delete_internal_memory=False):
         """Initialize the camera.

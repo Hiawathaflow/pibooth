@@ -24,6 +24,10 @@ class CameraPlugin(object):
                         "Preview source when a webcam and a DSLR are both connected "
                         "('webcam' or 'dslr')",
                         "Preview source", ['webcam', 'dslr'])
+        cfg.add_option('CAMERA', 'capture_trigger', 0,
+                        "Countdown number at which a DSLR capture is started, to compensate "
+                        "its shutter lag (0 = at the end of the countdown)",
+                        "Capture trigger", [str(i) for i in range(0, 6)])
 
     @pibooth.hookimpl(hookwrapper=True)
     def pibooth_setup_camera(self, cfg):
@@ -41,6 +45,7 @@ class CameraPlugin(object):
                        cfg.getboolean('CAMERA', 'delete_internal_memory'))
         # Keep the 'Smile!' overlay in the same color as the rest of the UI
         cam.overlay_text_color = cfg.gettyped('WINDOW', 'text_color')
+        cam.capture_trigger = cfg.getint('CAMERA', 'capture_trigger')
         outcome.force_result(cam)
 
     @pibooth.hookimpl
