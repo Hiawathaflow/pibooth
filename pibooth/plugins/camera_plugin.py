@@ -50,6 +50,10 @@ class CameraPlugin(object):
                         "Preview source when a webcam and a DSLR are both connected "
                         "('webcam' or 'dslr')",
                         "Preview source", ['webcam', 'dslr'])
+        cfg.add_option('CAMERA', 'capture_target', 'Internal RAM',
+                        "Where a DSLR stores the picture before it is downloaded: 'Internal RAM' "
+                        "works without a memory card (no backup on the camera), 'Memory card' keeps a copy",
+                        "Capture target", ['Internal RAM', 'Memory card'])
         cfg.add_option('CAMERA', 'capture_trigger', 0,
                         "Seconds before the end of the countdown at which a DSLR capture is "
                         "started, to compensate its shutter lag (0 = at the end)",
@@ -86,6 +90,7 @@ class CameraPlugin(object):
             LOGGER.debug("Fallback to pibooth default camera management system")
             cam = camera.find_camera(cfg)
 
+        cam.capture_target = cfg.get('CAMERA', 'capture_target')  # Used by initialize()
         cam.initialize(get_iso(cfg),
                        cfg.gettyped('CAMERA', 'resolution'),
                        cfg.gettuple('CAMERA', 'rotation', int, 2),

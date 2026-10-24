@@ -152,7 +152,7 @@ class GpCamera(BaseCamera):
                 self._preview_viewfinder = False
 
         self.set_config_value('imgsettings', 'iso', self.preview_iso)
-        self.set_config_value('settings', 'capturetarget', 'Memory card')
+        self.set_config_value('settings', 'capturetarget', self.capture_target)
 
     def _show_overlay(self, text, alpha):
         """Add an image as an overlay.
@@ -226,7 +226,8 @@ class GpCamera(BaseCamera):
         """
         gp_path, effect = capture_data
         camera_file = self._cam.file_get(gp_path.folder, gp_path.name, gp.GP_FILE_TYPE_NORMAL)
-        if self.delete_internal_memory:
+        # The RAM of the camera holds only a few pictures, so it has to be emptied
+        if self.delete_internal_memory or self.capture_target == 'Internal RAM':
             LOGGER.debug("Delete capture '%s' from internal memory", gp_path.name)
             self._cam.file_delete(gp_path.folder, gp_path.name)
         image = Image.open(io.BytesIO(camera_file.get_data_and_size()))

@@ -28,6 +28,8 @@ class BaseCamera(object):
         # Brightness of the live preview (1.0 = unchanged), the pictures are not affected
         self.preview_brightness = 1.0  # or 'auto' to follow the light
         self.preview_auto_target = 120
+        # Where a DSLR stores a new picture before it is downloaded ('Internal RAM' needs no card)
+        self.capture_target = 'Memory card'
         # Rework of the captured pictures (see enhance_image in camera/gphoto.py)
         self.photo_autolevels, self.photo_contrast, self.photo_saturation = (0, 1.0, 1.0)
 
