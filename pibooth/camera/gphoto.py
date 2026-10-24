@@ -419,11 +419,17 @@ class GpCamera(BaseCamera):
         self.set_config_value('actions', 'eosremoterelease', press)
         if press != 'Immediate':
             self.set_config_value('actions', 'eosremoterelease', 'Release Full')
+        gp_path = None
         timer = PoolingTimer(10)
-        while timer.remaining() > 0:
+        while timer.remaining() > 0 and gp_path is None:
             event_type, data = self._cam.wait_for_event(500)
             if event_type == gp.GP_EVENT_FILE_ADDED:
-                return data
+                gp_path = data
+        if press != 'Immediate':
+            # Without this the camera stays busy ('I/O in progress') and refuses live view
+            self.set_config_value('actions', 'eosremoterelease', 'Release Half')
+        if gp_path:
+            return gp_path
         raise gp.GPhoto2Error(gp.GP_ERROR_TIMEOUT)
 
     def _start_capture(self):
