@@ -18,20 +18,29 @@ def close_proxy(rpi2_cam_proxy, gp_cam_proxy, cv_cam_proxy):
         CvCamera(cv_cam_proxy).quit()
 
 
-def find_camera():
+def find_camera(cfg=None):
     """Initialize the camera depending of the connected one. The priority order
     is chosen in order to have best rendering during preview and to take captures.
     The gPhoto2 camera is first (drivers most restrictive) to avoid connection
     concurence in case of DSLR compatible with OpenCV.
+
+    :param cfg: configuration, used to read [CAMERA] preview_source when both
+                a webcam and a DSLR are connected
+    :type cfg: :py:class:`pibooth.config.parser.PiConfigParser`
     """
     rpi2_cam_proxy = get_rpi2_camera_proxy()
     gp_cam_proxy = get_gp_camera_proxy()
     cv_cam_proxy = get_cv_camera_proxy()
+    preview_source = cfg.get('CAMERA', 'preview_source') if cfg else 'webcam'
 
     if rpi2_cam_proxy and gp_cam_proxy:
         LOGGER.info("Configuring hybrid camera (Picamera2 + gPhoto2) ...")
         close_proxy(None, None, cv_cam_proxy)
         return HybridRpi2Camera(rpi2_cam_proxy, gp_cam_proxy)
+    elif cv_cam_proxy and gp_cam_proxy and preview_source == 'dslr':
+        LOGGER.info("Configuring gPhoto2 camera (preview_source=dslr) ...")
+        close_proxy(rpi2_cam_proxy, None, cv_cam_proxy)
+        return GpCamera(gp_cam_proxy)
     elif cv_cam_proxy and gp_cam_proxy:
         LOGGER.info("Configuring hybrid camera (OpenCV + gPhoto2) ...")
         close_proxy(rpi2_cam_proxy, None, None)

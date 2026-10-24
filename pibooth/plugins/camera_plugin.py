@@ -18,6 +18,13 @@ class CameraPlugin(object):
         self._pm = plugin_manager
         self.count = 0
 
+    @pibooth.hookimpl
+    def pibooth_configure(self, cfg):
+        cfg.add_option('CAMERA', 'preview_source', 'webcam',
+                        "Preview source when a webcam and a DSLR are both connected "
+                        "('webcam' or 'dslr')",
+                        "Preview source", ['webcam', 'dslr'])
+
     @pibooth.hookimpl(hookwrapper=True)
     def pibooth_setup_camera(self, cfg):
         outcome = yield  # all corresponding hookimpls are invoked here
@@ -25,7 +32,7 @@ class CameraPlugin(object):
 
         if not cam:
             LOGGER.debug("Fallback to pibooth default camera management system")
-            cam = camera.find_camera()
+            cam = camera.find_camera(cfg)
 
         cam.initialize(cfg.gettuple('CAMERA', 'iso', (int, str), 2),
                        cfg.gettyped('CAMERA', 'resolution'),
