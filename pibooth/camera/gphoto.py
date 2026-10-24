@@ -306,7 +306,7 @@ class GpCamera(BaseCamera):
         shown = False
         first_loop = True
         timer = PoolingTimer(timeout)
-        while not timer.is_timeout():
+        while timer.remaining() > 0:
             remaining = int(timer.remaining() + 1)
             if not self._overlay or remaining != timeout:
                 # Rebluid overlay only if remaining number has changed
@@ -349,7 +349,7 @@ class GpCamera(BaseCamera):
 
         timer = PoolingTimer(timeout)
         if self._preview_compatible:
-            while not timer.is_timeout():
+            while timer.remaining() > 0:
                 updated_rect = self._window.show_image(self._get_preview_image())
                 pygame.event.pump()
                 if updated_rect:
@@ -395,12 +395,36 @@ class GpCamera(BaseCamera):
         if self.capture_iso != self.preview_iso:
             self.set_config_value('imgsettings', 'iso', self.capture_iso)
 
-        gp_path = self._cam.capture(gp.GP_CAPTURE_IMAGE)
+        try:
+            gp_path = self._cam.capture(gp.GP_CAPTURE_IMAGE)
+        except gp.GPhoto2Error as ex:
+            # Typically the autofocus found nothing to focus on
+            LOGGER.warning("Capture failed (%s), releasing without autofocus", ex)
+            gp_path = self._capture_without_autofocus()
         time.sleep(0.3)  # Necessary to let the time for the camera to save the image
 
         if self.capture_iso != self.preview_iso:
             self.set_config_value('imgsettings', 'iso', self.preview_iso)
         return gp_path
+
+    def _capture_without_autofocus(self):
+        """Release the shutter of a Canon EOS immediately, ignoring the autofocus,
+        and return the path of the image on the camera.
+        """
+        # Depending on the libgphoto2 version the option is called 'Immediate' or 'Press Full MF'
+        config = self._cam.get_config()
+        child = config.get_child_by_name('actions').get_child_by_name('eosremoterelease')
+        choices = list(child.get_choices())
+        press = 'Press Full MF' if 'Press Full MF' in choices else 'Immediate'
+        self.set_config_value('actions', 'eosremoterelease', press)
+        if press != 'Immediate':
+            self.set_config_value('actions', 'eosremoterelease', 'Release Full')
+        timer = PoolingTimer(10)
+        while timer.remaining() > 0:
+            event_type, data = self._cam.wait_for_event(500)
+            if event_type == gp.GP_EVENT_FILE_ADDED:
+                return data
+        raise gp.GPhoto2Error(gp.GP_ERROR_TIMEOUT)
 
     def _start_capture(self):
         """Release the shutter in a thread, the result is collected by capture().
