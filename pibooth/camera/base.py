@@ -27,6 +27,8 @@ class BaseCamera(object):
         self.capture_trigger = 0
         # Brightness of the live preview (1.0 = unchanged), the pictures are not affected
         self.preview_brightness = 1.0
+        # Rework of the captured pictures (see enhance_image in camera/gphoto.py)
+        self.photo_autolevels, self.photo_contrast, self.photo_saturation = (0, 1.0, 1.0)
 
     def initialize(self, iso, resolution, rotation=0, flip=False, delete_internal_memory=False):
         """Initialize the camera.

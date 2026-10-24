@@ -32,6 +32,16 @@ class CameraPlugin(object):
                         "Brightness of the live preview, also on the wait screen "
                         "(1.0 = unchanged), does not affect the pictures",
                         "Preview brightness", ['{:.1f}'.format(i / 10) for i in range(5, 31)])
+        cfg.add_option('CAMERA', 'photo_autolevels', 1,
+                        "Percent of the darkest and brightest pixels ignored when the tonal "
+                        "range of the DSLR pictures is stretched (0 = off)",
+                        "Photo auto levels", ['0', '0.5', '1', '2', '3', '5'])
+        cfg.add_option('CAMERA', 'photo_contrast', 1.1,
+                        "Contrast of the DSLR pictures (1.0 = unchanged)",
+                        "Photo contrast", ['{:.1f}'.format(i / 10) for i in range(5, 21)])
+        cfg.add_option('CAMERA', 'photo_saturation', 1.0,
+                        "Color saturation of the DSLR pictures (1.0 = unchanged)",
+                        "Photo saturation", ['{:.1f}'.format(i / 10) for i in range(5, 21)])
 
     @pibooth.hookimpl(hookwrapper=True)
     def pibooth_setup_camera(self, cfg):
@@ -87,7 +97,21 @@ class CameraPlugin(object):
             app.capture_date = time.strftime("%Y-%m-%d-%H-%M-%S")
         app.camera.capture_trigger = cfg.getfloat('CAMERA', 'capture_trigger')  # Applied without restart
         app.camera.preview_brightness = cfg.getfloat('CAMERA', 'preview_brightness')
+        app.camera.photo_autolevels = cfg.getfloat('CAMERA', 'photo_autolevels')
+        app.camera.photo_contrast = cfg.getfloat('CAMERA', 'photo_contrast')
+        app.camera.photo_saturation = cfg.getfloat('CAMERA', 'photo_saturation')
+        self._apply_iso(cfg, app)
         app.camera.preview(win)
+
+    @staticmethod
+    def _apply_iso(cfg, app):
+        """Use a changed ISO without restarting pibooth.
+        """
+        iso = cfg.gettuple('CAMERA', 'iso', (int, str), 2)
+        if (app.camera.preview_iso, app.camera.capture_iso) != tuple(iso):
+            app.camera.preview_iso, app.camera.capture_iso = iso
+            if hasattr(app.camera, 'set_config_value'):
+                app.camera.set_config_value('imgsettings', 'iso', app.camera.preview_iso)
 
     @pibooth.hookimpl
     def state_preview_do(self, cfg, app):

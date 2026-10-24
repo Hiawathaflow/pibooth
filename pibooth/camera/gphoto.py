@@ -13,11 +13,40 @@ except Exception as ex:
     GPHOTO2_ERROR = ex
 else:
     GPHOTO2_ERROR = None
-from PIL import Image, ImageFilter
+from PIL import Image, ImageEnhance, ImageFilter
 from pibooth.pictures import sizing
 from pibooth.utils import LOGGER, PoolingTimer, pkill
 from pibooth.language import get_translated_text
 from pibooth.camera.base import BaseCamera
+
+
+def enhance_image(image, autolevels, contrast, saturation):
+    """Return the image with a stretched tonal range, more contrast and more
+    saturation. `autolevels` is the percentage of the darkest and brightest
+    pixels ignored when stretching (0 = off), the other values are factors
+    (1.0 = unchanged).
+    """
+    if autolevels > 0:
+        histogram = image.convert('L').histogram()
+        clip = sum(histogram) * autolevels / 100
+        low, count = 0, 0
+        while low < 255 and count + histogram[low] <= clip:
+            count += histogram[low]
+            low += 1
+        high, count = 255, 0
+        while high > 0 and count + histogram[high] <= clip:
+            count += histogram[high]
+            high -= 1
+        if high - low > 32:  # Do not blow up an almost flat image
+            scale = 255 / (high - low)
+            lut = [min(255, max(0, round((i - low) * scale))) for i in range(256)]
+            # Same curve on all channels, so that the colors are not shifted
+            image = image.convert('RGB').point(lut * 3)
+    if contrast != 1.0:
+        image = ImageEnhance.Contrast(image).enhance(contrast)
+    if saturation != 1.0:
+        image = ImageEnhance.Color(image).enhance(saturation)
+    return image
 
 
 def get_gp_camera_proxy(port=None):
@@ -196,7 +225,7 @@ class GpCamera(BaseCamera):
         if effect != 'none':
             image = image.filter(getattr(ImageFilter, effect.upper()))
 
-        return image
+        return enhance_image(image, self.photo_autolevels, self.photo_contrast, self.photo_saturation)
 
     def set_config_value(self, section, option, value):
         """Set camera configuration.
