@@ -2,6 +2,7 @@
 
 import io
 import time
+import threading
 import pygame
 try:
     import gphoto2 as gp
@@ -95,6 +96,13 @@ class GpCamera(BaseCamera):
         self._gp_logcb = None
         self._preview_compatible = True
         self._preview_viewfinder = False
+        # Last preview image without overlay, shown frozen while the capture
+        # is triggered in the background during the countdown
+        self._last_preview = None
+        self._preview_frozen = False
+        self._capture_thread = None
+        self._capture_result = None
+        self._capture_error = None
 
     def _specific_initialization(self):
         """Camera initialization.
@@ -137,7 +145,9 @@ class GpCamera(BaseCamera):
         """Capture a new preview image.
         """
         rect = self.get_rect()
-        if self._preview_compatible:
+        if self._preview_compatible and self._preview_frozen:
+            image = self._last_preview
+        elif self._preview_compatible:
             cam_file = self._cam.capture_preview()
             image = Image.open(io.BytesIO(cam_file.get_data_and_size()))
             image = self._rotate_image(image, self.preview_rotation)
@@ -148,10 +158,12 @@ class GpCamera(BaseCamera):
 
             if self.preview_flip:
                 image = image.transpose(Image.FLIP_LEFT_RIGHT)
+            self._last_preview = image
         else:
             image = Image.new('RGB', (rect.width, rect.height), color=(0, 0, 0))
 
         if self._overlay:
+            image = image.copy()
             image.paste(self._overlay, (0, 0), self._overlay)
         return image
 
@@ -225,6 +237,7 @@ class GpCamera(BaseCamera):
         """
         self._window = window
         self.preview_flip = flip
+        self._preview_frozen = False
 
         if self._preview_compatible:
             if self._preview_viewfinder:
@@ -251,11 +264,13 @@ class GpCamera(BaseCamera):
                 shown = False
 
             updated_rect = None
-            if self._preview_compatible:
+            if self._preview_compatible and not self._preview_frozen:
                 updated_rect = self._window.show_image(self._get_preview_image())
             elif not shown:
                 updated_rect = self._window.show_image(self._get_preview_image())
-                shown = True  # Do not update dummy preview until next overlay update
+                shown = True  # Do not update dummy or frozen preview until next overlay update
+            else:
+                time.sleep(0.02)
 
             if first_loop:
                 timer.start()  # Because first preview capture is longer than others
@@ -265,8 +280,11 @@ class GpCamera(BaseCamera):
             if updated_rect:
                 pygame.display.update(updated_rect)
 
-            if self.capture_trigger and remaining <= self.capture_trigger:
-                break  # The camera needs time to react, start capturing now
+            if self.capture_trigger and not self._capture_thread and timer.remaining() <= self.capture_trigger:
+                # The camera needs time to react: capture now, keep the last
+                # preview image and let the countdown run down on top of it
+                self._start_capture()
+                self._preview_frozen = self._preview_compatible
 
         self._show_overlay(get_translated_text('smile'), alpha)
         self._window.show_image(self._get_preview_image())
@@ -300,23 +318,51 @@ class GpCamera(BaseCamera):
     def capture(self, effect=None):
         """Capture a new picture.
         """
-        if self._preview_viewfinder:
-            self.set_config_value('actions', 'viewfinder', 0)
-
         effect = str(effect).lower()
         if effect not in self.IMAGE_EFFECTS:
             raise ValueError("Invalid capture effect '{}' (choose among {})".format(effect, self.IMAGE_EFFECTS))
 
+        if self._capture_thread:  # Already triggered during the countdown
+            self._capture_thread.join()
+            self._capture_thread = None
+            if self._capture_error:
+                raise self._capture_error
+            gp_path = self._capture_result
+        else:
+            gp_path = self._trigger_capture()
+
+        self._captures.append((gp_path, effect))
+        self._preview_frozen = False
+        self._hide_overlay()  # If stop_preview() has not been called
+
+    def _trigger_capture(self):
+        """Release the shutter and return the path of the image on the camera.
+        """
+        if self._preview_viewfinder:
+            self.set_config_value('actions', 'viewfinder', 0)
+
         if self.capture_iso != self.preview_iso:
             self.set_config_value('imgsettings', 'iso', self.capture_iso)
 
-        self._captures.append((self._cam.capture(gp.GP_CAPTURE_IMAGE), effect))
+        gp_path = self._cam.capture(gp.GP_CAPTURE_IMAGE)
         time.sleep(0.3)  # Necessary to let the time for the camera to save the image
 
         if self.capture_iso != self.preview_iso:
             self.set_config_value('imgsettings', 'iso', self.preview_iso)
+        return gp_path
 
-        self._hide_overlay()  # If stop_preview() has not been called
+    def _start_capture(self):
+        """Release the shutter in a thread, the result is collected by capture().
+        """
+        def run():
+            try:
+                self._capture_result = self._trigger_capture()
+            except Exception as ex:  # Re-raised in capture()
+                self._capture_error = ex
+
+        self._capture_result = self._capture_error = None
+        self._capture_thread = threading.Thread(target=run, daemon=True)
+        self._capture_thread.start()
 
     def quit(self):
         """Close the camera driver, it's definitive.

@@ -25,9 +25,9 @@ class CameraPlugin(object):
                         "('webcam' or 'dslr')",
                         "Preview source", ['webcam', 'dslr'])
         cfg.add_option('CAMERA', 'capture_trigger', 0,
-                        "Countdown number at which a DSLR capture is started, to compensate "
-                        "its shutter lag (0 = at the end of the countdown)",
-                        "Capture trigger", [str(i) for i in range(0, 6)])
+                        "Seconds before the end of the countdown at which a DSLR capture is "
+                        "started, to compensate its shutter lag (0 = at the end)",
+                        "Capture trigger", ['0', '1', '1.25', '1.5', '1.75', '2', '3', '4', '5'])
 
     @pibooth.hookimpl(hookwrapper=True)
     def pibooth_setup_camera(self, cfg):
@@ -81,7 +81,7 @@ class CameraPlugin(object):
         LOGGER.info("Show preview before next capture")
         if not app.capture_date:
             app.capture_date = time.strftime("%Y-%m-%d-%H-%M-%S")
-        app.camera.capture_trigger = cfg.getint('CAMERA', 'capture_trigger')  # Applied without restart
+        app.camera.capture_trigger = cfg.getfloat('CAMERA', 'capture_trigger')  # Applied without restart
         app.camera.preview(win)
 
     @pibooth.hookimpl
