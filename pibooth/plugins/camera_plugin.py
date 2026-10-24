@@ -15,6 +15,14 @@ def get_iso(cfg):
     return tuple(cfg.gettuple('CAMERA', 'iso', (int, str), 2))
 
 
+def apply_preview_brightness(cfg, app):
+    """Hand the brightness settings of the live preview to the camera.
+    """
+    value = cfg.get('CAMERA', 'preview_brightness')
+    app.camera.preview_brightness = 'auto' if value.lower() == 'auto' else float(value)
+    app.camera.preview_auto_target = cfg.getfloat('CAMERA', 'preview_auto_target')
+
+
 def apply_iso(cfg, app):
     """Use a changed ISO or light mode without restarting pibooth.
     """
@@ -48,8 +56,12 @@ class CameraPlugin(object):
                         "Capture trigger", ['0', '0.25', '0.5', '0.75', '1', '1.25', '1.5', '1.75', '2', '2.25', '2.5', '2.75', '3', '4', '5'])
         cfg.add_option('CAMERA', 'preview_brightness', 1.3,
                         "Brightness of the live preview, also on the wait screen "
-                        "(1.0 = unchanged), does not affect the pictures",
-                        "Preview brightness", ['{:.1f}'.format(i / 10) for i in range(5, 31)])
+                        "(1.0 = unchanged, Auto = follows the light), does not affect the pictures",
+                        "Preview brightness", ['Auto'] + ['{:.1f}'.format(i / 10) for i in range(5, 31)])
+        cfg.add_option('CAMERA', 'preview_auto_target', 120,
+                        "Average brightness (0-255) the preview is adjusted to "
+                        "when the preview brightness is Auto",
+                        "Preview target", [str(i) for i in range(80, 181, 10)])
         cfg.add_option('CAMERA', 'light_mode', 'indoor',
                         "Exposure: 'indoor' uses the fixed ISO, 'outdoor' lets the DSLR choose "
                         "the ISO itself while the light changes",
@@ -118,7 +130,7 @@ class CameraPlugin(object):
         if not app.capture_date:
             app.capture_date = time.strftime("%Y-%m-%d-%H-%M-%S")
         app.camera.capture_trigger = cfg.getfloat('CAMERA', 'capture_trigger')  # Applied without restart
-        app.camera.preview_brightness = cfg.getfloat('CAMERA', 'preview_brightness')
+        apply_preview_brightness(cfg, app)
         app.camera.photo_autolevels = cfg.getfloat('CAMERA', 'photo_autolevels')
         app.camera.photo_contrast = cfg.getfloat('CAMERA', 'photo_contrast')
         app.camera.photo_saturation = cfg.getfloat('CAMERA', 'photo_saturation')

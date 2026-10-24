@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import io
+import math
 import time
 import threading
 import pygame
@@ -129,6 +130,7 @@ class GpCamera(BaseCamera):
         # is triggered in the background during the countdown
         self._last_preview = None
         self._preview_frozen = False
+        self._auto_gamma = 1.0
         self._capture_thread = None
         self._capture_result = None
         self._capture_error = None
@@ -170,6 +172,21 @@ class GpCamera(BaseCamera):
             return image.transpose(Image.ROTATE_270)
         return image
 
+    def _get_preview_gamma(self, image):
+        """Return the gamma to lighten the preview image. With the 'auto' brightness
+        it is derived from the image itself, smoothed over the last frames so that
+        the preview does not flicker.
+        """
+        if self.preview_brightness != 'auto':
+            self._auto_gamma = 1.0
+            return self.preview_brightness
+        pixels = list(image.convert('L').resize((32, 32)).getdata())
+        mean = max(sum(pixels) / len(pixels), 1)
+        gamma = math.log(mean / 255) / math.log(self.preview_auto_target / 255)
+        gamma = min(3.0, max(0.7, gamma))
+        self._auto_gamma += 0.3 * (gamma - self._auto_gamma)
+        return round(self._auto_gamma, 2)
+
     def _get_preview_image(self):
         """Capture a new preview image.
         """
@@ -187,9 +204,10 @@ class GpCamera(BaseCamera):
 
             if self.preview_flip:
                 image = image.transpose(Image.FLIP_LEFT_RIGHT)
-            if self.preview_brightness != 1.0:
+            gamma = self._get_preview_gamma(image)
+            if gamma != 1.0:
                 # Gamma curve: lifts the shadows without clipping the highlights
-                lut = [round(255 * (i / 255) ** (1 / self.preview_brightness)) for i in range(256)]
+                lut = [round(255 * (i / 255) ** (1 / gamma)) for i in range(256)]
                 image = image.convert('RGB').point(lut * 3)
             self._last_preview = image
         else:

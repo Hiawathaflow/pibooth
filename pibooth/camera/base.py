@@ -26,7 +26,8 @@ class BaseCamera(object):
         # Seconds before the end of the countdown at which the capture is started
         self.capture_trigger = 0
         # Brightness of the live preview (1.0 = unchanged), the pictures are not affected
-        self.preview_brightness = 1.0
+        self.preview_brightness = 1.0  # or 'auto' to follow the light
+        self.preview_auto_target = 120
         # Rework of the captured pictures (see enhance_image in camera/gphoto.py)
         self.photo_autolevels, self.photo_contrast, self.photo_saturation = (0, 1.0, 1.0)
 
