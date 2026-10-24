@@ -27,7 +27,7 @@ class CameraPlugin(object):
         cfg.add_option('CAMERA', 'capture_trigger', 0,
                         "Seconds before the end of the countdown at which a DSLR capture is "
                         "started, to compensate its shutter lag (0 = at the end)",
-                        "Capture trigger", ['0', '1', '1.25', '1.5', '1.75', '2', '2.25', '2.5', '2.75', '3', '4', '5'])
+                        "Capture trigger", ['0', '0.25', '0.5', '0.75', '1', '1.25', '1.5', '1.75', '2', '2.25', '2.5', '2.75', '3', '4', '5'])
 
     @pibooth.hookimpl(hookwrapper=True)
     def pibooth_setup_camera(self, cfg):
