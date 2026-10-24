@@ -28,6 +28,10 @@ class CameraPlugin(object):
                         "Seconds before the end of the countdown at which a DSLR capture is "
                         "started, to compensate its shutter lag (0 = at the end)",
                         "Capture trigger", ['0', '0.25', '0.5', '0.75', '1', '1.25', '1.5', '1.75', '2', '2.25', '2.5', '2.75', '3', '4', '5'])
+        cfg.add_option('CAMERA', 'preview_brightness', 1.3,
+                        "Brightness of the live preview, also on the wait screen "
+                        "(1.0 = unchanged), does not affect the pictures",
+                        "Preview brightness", ['{:.1f}'.format(i / 10) for i in range(5, 31)])
 
     @pibooth.hookimpl(hookwrapper=True)
     def pibooth_setup_camera(self, cfg):
@@ -82,6 +86,7 @@ class CameraPlugin(object):
         if not app.capture_date:
             app.capture_date = time.strftime("%Y-%m-%d-%H-%M-%S")
         app.camera.capture_trigger = cfg.getfloat('CAMERA', 'capture_trigger')  # Applied without restart
+        app.camera.preview_brightness = cfg.getfloat('CAMERA', 'preview_brightness')
         app.camera.preview(win)
 
     @pibooth.hookimpl

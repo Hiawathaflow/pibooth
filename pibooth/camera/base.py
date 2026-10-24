@@ -25,6 +25,8 @@ class BaseCamera(object):
         self.overlay_text_color = (255, 255, 255)
         # Seconds before the end of the countdown at which the capture is started
         self.capture_trigger = 0
+        # Brightness of the live preview (1.0 = unchanged), the pictures are not affected
+        self.preview_brightness = 1.0
 
     def initialize(self, iso, resolution, rotation=0, flip=False, delete_internal_memory=False):
         """Initialize the camera.

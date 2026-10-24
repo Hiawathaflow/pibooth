@@ -35,6 +35,7 @@ def show_wait_preview(cfg, app, win):
         # _get_preview_image() needs the window to compute the target size;
         # normally preview() sets it, which does not run in the wait state.
         app.camera._window = win
+        app.camera.preview_brightness = cfg.getfloat('CAMERA', 'preview_brightness')
         image = app.camera._get_preview_image()
     except Exception as ex:
         LOGGER.warning("Permanent preview not available: %s", ex)

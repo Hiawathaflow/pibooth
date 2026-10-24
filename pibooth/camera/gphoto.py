@@ -158,6 +158,10 @@ class GpCamera(BaseCamera):
 
             if self.preview_flip:
                 image = image.transpose(Image.FLIP_LEFT_RIGHT)
+            if self.preview_brightness != 1.0:
+                # Gamma curve: lifts the shadows without clipping the highlights
+                lut = [round(255 * (i / 255) ** (1 / self.preview_brightness)) for i in range(256)]
+                image = image.convert('RGB').point(lut * 3)
             self._last_preview = image
         else:
             image = Image.new('RGB', (rect.width, rect.height), color=(0, 0, 0))
