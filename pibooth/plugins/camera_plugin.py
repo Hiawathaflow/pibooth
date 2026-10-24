@@ -45,7 +45,6 @@ class CameraPlugin(object):
                        cfg.getboolean('CAMERA', 'delete_internal_memory'))
         # Keep the 'Smile!' overlay in the same color as the rest of the UI
         cam.overlay_text_color = cfg.gettyped('WINDOW', 'text_color')
-        cam.capture_trigger = cfg.getint('CAMERA', 'capture_trigger')
         outcome.force_result(cam)
 
     @pibooth.hookimpl
@@ -82,6 +81,7 @@ class CameraPlugin(object):
         LOGGER.info("Show preview before next capture")
         if not app.capture_date:
             app.capture_date = time.strftime("%Y-%m-%d-%H-%M-%S")
+        app.camera.capture_trigger = cfg.getint('CAMERA', 'capture_trigger')  # Applied without restart
         app.camera.preview(win)
 
     @pibooth.hookimpl
